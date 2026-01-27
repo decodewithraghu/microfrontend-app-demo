@@ -6,6 +6,13 @@
  * - useStateStore: Access and update state
  * - useAuth: Authentication state and actions
  * - useCountry: Country selection management
+ * - useAPIGateway: API calls with caching
+ * - useFeatureFlags: Feature flag management
+ * - useAnalytics: Analytics tracking
+ * - usePerformance: Performance monitoring
+ * - useLogger: Structured logging
+ * 
+ * @version 3.0.0 - Added target architecture hooks
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -453,6 +460,389 @@ export const useNavigation = () => {
   });
 
   return { navigate };
+};
+
+// ============================================
+// Target Architecture Hooks (v3.0)
+// ============================================
+
+/**
+ * Hook for API Gateway with caching and error handling
+ * @returns {Object} API methods and state
+ */
+export const useAPIGateway = () => {
+  // Lazy import to avoid circular dependencies
+  const [gateway, setGateway] = useState(null);
+  
+  useEffect(() => {
+    import('./apiGateway.js').then(module => {
+      setGateway(module.default);
+    });
+  }, []);
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const request = useCallback(async (method, url, options = {}) => {
+    if (!gateway) {
+      throw new Error('API Gateway not initialized');
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await gateway.request(method, url, options);
+      return result;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [gateway]);
+
+  const getCountries = useCallback(async () => {
+    if (!gateway) return [];
+    setLoading(true);
+    setError(null);
+    try {
+      return await gateway.getCountries();
+    } catch (err) {
+      setError(err.message);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, [gateway]);
+
+  const getWeather = useCallback(async (lat, lon) => {
+    if (!gateway) return null;
+    setLoading(true);
+    setError(null);
+    try {
+      return await gateway.getWeather(lat, lon);
+    } catch (err) {
+      setError(err.message);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [gateway]);
+
+  const getPopulation = useCallback(async (countryCode) => {
+    if (!gateway) return null;
+    setLoading(true);
+    setError(null);
+    try {
+      return await gateway.getPopulation(countryCode);
+    } catch (err) {
+      setError(err.message);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [gateway]);
+
+  return {
+    loading,
+    error,
+    request,
+    getCountries,
+    getWeather,
+    getPopulation,
+    clearCache: useCallback(() => gateway?.clearCache(), [gateway]),
+    isReady: !!gateway,
+  };
+};
+
+/**
+ * Hook for feature flags with reactive updates
+ * @param {string} flagKey - Feature flag key to check
+ * @returns {Object} Feature flag state and methods
+ */
+export const useFeatureFlags = (flagKey = null) => {
+  const [flags, setFlags] = useState(null);
+  const [flagsService, setFlagsService] = useState(null);
+  
+  useEffect(() => {
+    import('./featureFlags.js').then(module => {
+      const service = module.default;
+      setFlagsService(service);
+      setFlags(service.getFlags());
+      
+      // Subscribe to flag changes
+      const unsubscribe = service.subscribe((updatedFlags) => {
+        setFlags({ ...updatedFlags });
+      });
+      
+      return unsubscribe;
+    });
+  }, []);
+
+  const isEnabled = useCallback((key) => {
+    return flagsService?.isEnabled(key) ?? false;
+  }, [flagsService]);
+
+  const getValue = useCallback((key, defaultValue) => {
+    return flagsService?.getValue(key, defaultValue);
+  }, [flagsService]);
+
+  const setOverride = useCallback((key, value) => {
+    flagsService?.setLocalOverride(key, value);
+  }, [flagsService]);
+
+  const clearOverride = useCallback((key) => {
+    flagsService?.clearLocalOverride(key);
+  }, [flagsService]);
+
+  // If a specific flag key is provided, return simplified interface
+  if (flagKey) {
+    return {
+      enabled: isEnabled(flagKey),
+      value: getValue(flagKey),
+      setOverride: (value) => setOverride(flagKey, value),
+      clearOverride: () => clearOverride(flagKey),
+    };
+  }
+
+  return {
+    flags,
+    isEnabled,
+    getValue,
+    setOverride,
+    clearOverride,
+    isReady: !!flagsService,
+  };
+};
+
+/**
+ * Hook for analytics tracking
+ * @param {string} componentName - Name of the component for context
+ * @returns {Object} Analytics methods
+ */
+export const useAnalytics = (componentName = 'Unknown') => {
+  const [analyticsService, setAnalyticsService] = useState(null);
+
+  useEffect(() => {
+    import('./analytics.js').then(module => {
+      setAnalyticsService(module.default);
+    });
+  }, []);
+
+  const track = useCallback((eventType, properties = {}) => {
+    analyticsService?.track(eventType, {
+      ...properties,
+      component: componentName,
+    });
+  }, [analyticsService, componentName]);
+
+  const pageView = useCallback((path, title) => {
+    analyticsService?.pageView(path, title);
+  }, [analyticsService]);
+
+  const identify = useCallback((userId, traits = {}) => {
+    analyticsService?.identify(userId, traits);
+  }, [analyticsService]);
+
+  const time = useCallback((eventName) => {
+    return analyticsService?.time(eventName) || (() => {});
+  }, [analyticsService]);
+
+  return {
+    track,
+    pageView,
+    identify,
+    time,
+    isReady: !!analyticsService,
+  };
+};
+
+/**
+ * Hook for performance monitoring
+ * @param {string} componentName - Name of the component for tracking
+ * @returns {Object} Performance monitoring methods
+ */
+export const usePerformance = (componentName = 'Unknown') => {
+  const [perfService, setPerfService] = useState(null);
+  const mountTimeRef = useRef(null);
+
+  useEffect(() => {
+    import('./performanceMonitor.js').then(module => {
+      setPerfService(module.default);
+      mountTimeRef.current = performance.now();
+    });
+
+    return () => {
+      // Track component unmount time
+      if (perfService && mountTimeRef.current) {
+        const mountDuration = performance.now() - mountTimeRef.current;
+        perfService.addCustomMetric(`component.${componentName}.lifetime`, mountDuration);
+      }
+    };
+  }, [componentName]);
+
+  const trackMetric = useCallback((name, value) => {
+    perfService?.addCustomMetric(name, value);
+  }, [perfService]);
+
+  const trackTiming = useCallback((name, duration) => {
+    perfService?.addCustomMetric(name, duration);
+  }, [perfService]);
+
+  const getReport = useCallback(() => {
+    return perfService?.getReport() || {};
+  }, [perfService]);
+
+  const measureAsync = useCallback(async (name, asyncFn) => {
+    const start = performance.now();
+    try {
+      return await asyncFn();
+    } finally {
+      const duration = performance.now() - start;
+      perfService?.addCustomMetric(name, duration);
+    }
+  }, [perfService]);
+
+  return {
+    trackMetric,
+    trackTiming,
+    getReport,
+    measureAsync,
+    isReady: !!perfService,
+  };
+};
+
+/**
+ * Hook for structured logging
+ * @param {string} context - Logging context (component/module name)
+ * @returns {Object} Logging methods
+ */
+export const useLogger = (context = 'Unknown') => {
+  const [loggerService, setLoggerService] = useState(null);
+  const childLogger = useRef(null);
+
+  useEffect(() => {
+    import('./logger.js').then(module => {
+      setLoggerService(module.default);
+      childLogger.current = module.default.child({ component: context });
+    });
+  }, [context]);
+
+  const log = useCallback((level, message, data = {}) => {
+    childLogger.current?.[level]?.(message, data);
+  }, []);
+
+  const debug = useCallback((message, data = {}) => {
+    childLogger.current?.debug(message, data);
+  }, []);
+
+  const info = useCallback((message, data = {}) => {
+    childLogger.current?.info(message, data);
+  }, []);
+
+  const warn = useCallback((message, data = {}) => {
+    childLogger.current?.warn(message, data);
+  }, []);
+
+  const error = useCallback((message, data = {}) => {
+    childLogger.current?.error(message, data);
+  }, []);
+
+  const time = useCallback((operationName) => {
+    return childLogger.current?.time(operationName) || (() => {});
+  }, []);
+
+  return {
+    log,
+    debug,
+    info,
+    warn,
+    error,
+    time,
+    isReady: !!loggerService,
+  };
+};
+
+/**
+ * Hook for security utilities
+ * @returns {Object} Security methods
+ */
+export const useSecurity = () => {
+  const [securityModule, setSecurityModule] = useState(null);
+
+  useEffect(() => {
+    import('./security.js').then(module => {
+      setSecurityModule(module);
+    });
+  }, []);
+
+  const sanitize = useCallback((input) => {
+    return securityModule?.InputSanitizer?.sanitizeHTML(input) ?? input;
+  }, [securityModule]);
+
+  const getCSRFToken = useCallback(() => {
+    return securityModule?.csrfProtection?.getToken();
+  }, [securityModule]);
+
+  const validateCSRF = useCallback((token) => {
+    return securityModule?.csrfProtection?.validateToken(token) ?? false;
+  }, [securityModule]);
+
+  const runSecurityAudit = useCallback(() => {
+    return securityModule?.SecurityAudit?.runFullAudit() ?? {};
+  }, [securityModule]);
+
+  return {
+    sanitize,
+    getCSRFToken,
+    validateCSRF,
+    runSecurityAudit,
+    isReady: !!securityModule,
+  };
+};
+
+/**
+ * Hook for cryptographic operations
+ * @returns {Object} Crypto methods
+ */
+export const useCrypto = () => {
+  const [cryptoModule, setCryptoModule] = useState(null);
+
+  useEffect(() => {
+    import('./crypto.js').then(module => {
+      setCryptoModule(module);
+    });
+  }, []);
+
+  const encrypt = useCallback(async (data, key) => {
+    if (!cryptoModule) throw new Error('Crypto not initialized');
+    return await cryptoModule.encrypt(data, key);
+  }, [cryptoModule]);
+
+  const decrypt = useCallback(async (data, key) => {
+    if (!cryptoModule) throw new Error('Crypto not initialized');
+    return await cryptoModule.decrypt(data, key);
+  }, [cryptoModule]);
+
+  const hash = useCallback(async (data, algorithm = 'SHA-256') => {
+    if (!cryptoModule) throw new Error('Crypto not initialized');
+    return await cryptoModule.hash(data, algorithm);
+  }, [cryptoModule]);
+
+  const generateId = useCallback(async () => {
+    if (!cryptoModule) throw new Error('Crypto not initialized');
+    return await cryptoModule.generateSecureId();
+  }, [cryptoModule]);
+
+  return {
+    encrypt,
+    decrypt,
+    hash,
+    generateId,
+    isAvailable: cryptoModule?.isCryptoAvailable?.() ?? false,
+    isReady: !!cryptoModule,
+  };
 };
 
 export default {

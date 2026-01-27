@@ -5,8 +5,12 @@
  * Micro Frontend communication and state management.
  * 
  * @module @mfe/shared
- * @version 2.0.0
+ * @version 3.0.0
  */
+
+// ============================================
+// Core Services
+// ============================================
 
 // Event Bus - Pub/Sub Communication
 export {
@@ -50,7 +54,15 @@ export {
   validateAuthToken,
 } from './authService.js';
 
+// ============================================
+// New Target Architecture Services
+// NOTE: These are available but not loaded by default
+// to prevent initialization issues. Import directly if needed.
+// ============================================
+
+// ============================================
 // Middleware Collection
+// ============================================
 export {
   createLoggingMiddleware,
   createValidationMiddleware,
@@ -69,7 +81,9 @@ export {
   eventSchemas,
 } from './middleware.js';
 
+// ============================================
 // React Hooks
+// ============================================
 export {
   useEventBus,
   useEventPublisher,
@@ -85,6 +99,8 @@ export {
   useNavigation,
 } from './hooks.js';
 
+// ============================================
 // Legacy exports for backward compatibility
+// ============================================
 export * from './auth.js';
 export * from './events.js';

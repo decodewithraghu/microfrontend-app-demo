@@ -13,6 +13,7 @@ This documentation directory contains complete technical documentation for the M
 |----------|-------------|
 | [Getting Started](./GETTING_STARTED.md) | Quick start guide, installation, running the app |
 | [Architecture Overview](./ARCHITECTURE.md) | System architecture, design patterns, data flow |
+| [Architecture Diagrams](./ARCHITECTURE_DIAGRAMS_UPDATED.md) | **Updated Mermaid diagrams** |
 
 ### API Reference
 | Document | Description |
@@ -37,6 +38,25 @@ This documentation directory contains complete technical documentation for the M
 | [Testing Guide](./TESTING.md) | Jest unit tests, Cypress E2E tests |
 | [Deployment Guide](./DEPLOYMENT.md) | Build, Docker, Kubernetes, CI/CD |
 | [Troubleshooting](./TROUBLESHOOTING.md) | Common issues and solutions |
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Build all MFEs (required for Module Federation)
+npm run build
+
+# Start in preview mode
+npm run preview
+
+# Open http://localhost:3000
+```
+
+> **Important**: Module Federation requires `npm run build` before `npm run preview`. The `remoteEntry.js` files are only generated during build.
 
 ---
 

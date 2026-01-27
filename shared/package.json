@@ -1,12 +1,20 @@
 {
   "name": "@mfe/shared",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "type": "module",
+  "description": "Enterprise-grade shared library for Micro Frontend applications with security, monitoring, and analytics",
   "main": "src/index.js",
   "exports": {
     ".": "./src/index.js",
     "./auth": "./src/auth.js",
-    "./events": "./src/events.js"
+    "./events": "./src/events.js",
+    "./crypto": "./src/crypto.js",
+    "./apiGateway": "./src/apiGateway.js",
+    "./logger": "./src/logger.js",
+    "./performanceMonitor": "./src/performanceMonitor.js",
+    "./security": "./src/security.js",
+    "./featureFlags": "./src/featureFlags.js",
+    "./analytics": "./src/analytics.js"
   },
   "scripts": {
     "test": "jest",
@@ -19,5 +27,14 @@
   "devDependencies": {
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0"
-  }
+  },
+  "keywords": [
+    "microfrontend",
+    "mfe",
+    "shared",
+    "security",
+    "analytics",
+    "monitoring",
+    "web-crypto"
+  ]
 }

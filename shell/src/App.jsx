@@ -1,37 +1,47 @@
-import React, { Suspense, useState, useEffect, lazy } from 'react';
+import React, { Suspense, useState, useEffect, lazy, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+
+// Import core shared library services
+import {
+  eventBus,
+  EventTypes,
+  store,
+} from '@mfe/shared';
+
+// Simple session helpers (compatible with Login MFE)
+const AUTH_KEY = 'mfe_auth_session';
+const COUNTRY_KEY = 'mfe_selected_country';
+
+const decryptData = (encrypted) => {
+  try {
+    const jsonStr = decodeURIComponent(atob(encrypted));
+    return JSON.parse(jsonStr);
+  } catch {
+    return null;
+  }
+};
+
+const getSession = () => {
+  const encrypted = sessionStorage.getItem(AUTH_KEY);
+  if (!encrypted) return null;
+  const sessionData = decryptData(encrypted);
+  if (!sessionData || Date.now() > sessionData.expiresAt) {
+    sessionStorage.removeItem(AUTH_KEY);
+    return null;
+  }
+  return sessionData.user;
+};
+
+const getSelectedCountry = () => {
+  const encrypted = sessionStorage.getItem(COUNTRY_KEY);
+  if (!encrypted) return null;
+  return decryptData(encrypted);
+};
 
 // Lazy load remote MFEs
 const LoginApp = lazy(() => import('loginMfe/LoginApp'));
 const WeatherApp = lazy(() => import('weatherMfe/WeatherApp'));
 const PopulationApp = lazy(() => import('populationMfe/PopulationApp'));
-
-// Auth helpers (duplicated here for shell - in production use shared package)
-const getSession = () => {
-  const encrypted = sessionStorage.getItem('mfe_auth_session');
-  if (!encrypted) return null;
-  try {
-    const jsonStr = decodeURIComponent(atob(encrypted));
-    const sessionData = JSON.parse(jsonStr);
-    if (Date.now() > sessionData.expiresAt) {
-      sessionStorage.removeItem('mfe_auth_session');
-      return null;
-    }
-    return sessionData.user;
-  } catch {
-    return null;
-  }
-};
-
-const getSelectedCountry = () => {
-  const encrypted = sessionStorage.getItem('mfe_selected_country');
-  if (!encrypted) return null;
-  try {
-    return JSON.parse(decodeURIComponent(atob(encrypted)));
-  } catch {
-    return null;
-  }
-};
 
 // Loading Component
 const Loading = () => (
@@ -42,32 +52,38 @@ const Loading = () => (
 );
 
 // Error Page Component
-const ErrorPage = ({ error, onRetry, onGoHome }) => (
-  <div className="error-page">
-    <div className="error-page-content">
-      <div className="error-icon">⚠️</div>
-      <h1 className="error-title">Oops! Something went wrong</h1>
-      <h2 className="error-subtitle">Failed to load micro frontend</h2>
-      <p className="error-message">{error?.message || 'An unexpected error occurred while loading the application.'}</p>
-      <div className="error-details">
-        <p>This could be due to:</p>
-        <ul>
-          <li>Network connectivity issues</li>
-          <li>The micro frontend service is temporarily unavailable</li>
-          <li>An internal application error</li>
-        </ul>
-      </div>
-      <div className="error-actions">
-        <button onClick={onRetry} className="error-btn error-btn-retry">
-          🔄 Try Again
-        </button>
-        <button onClick={onGoHome} className="error-btn error-btn-home">
-          🏠 Go to Home
-        </button>
+const ErrorPage = ({ error, onRetry, onGoHome }) => {
+  useEffect(() => {
+    console.error('MFE load error:', error?.message);
+  }, [error]);
+
+  return (
+    <div className="error-page">
+      <div className="error-page-content">
+        <div className="error-icon">⚠️</div>
+        <h1 className="error-title">Oops! Something went wrong</h1>
+        <h2 className="error-subtitle">Failed to load micro frontend</h2>
+        <p className="error-message">{error?.message || 'An unexpected error occurred while loading the application.'}</p>
+        <div className="error-details">
+          <p>This could be due to:</p>
+          <ul>
+            <li>Network connectivity issues</li>
+            <li>The micro frontend service is temporarily unavailable</li>
+            <li>An internal application error</li>
+          </ul>
+        </div>
+        <div className="error-actions">
+          <button onClick={onRetry} className="error-btn error-btn-retry">
+            🔄 Try Again
+          </button>
+          <button onClick={onGoHome} className="error-btn error-btn-home">
+            🏠 Go to Home
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // Error Boundary
 class ErrorBoundary extends React.Component {
@@ -81,8 +97,13 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log error to console for debugging
-    console.error('MFE Error:', error, errorInfo);
+    console.error('MFE Error caught by boundary:', error, errorInfo);
+    
+    // Publish error event to event bus
+    eventBus.publish(EventTypes.SYSTEM.ERROR, {
+      error: error?.message,
+      componentStack: errorInfo?.componentStack,
+    }, { source: 'Shell' });
   }
 
   handleRetry = () => {
@@ -109,15 +130,44 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// Protected Route Component
+// Protected Route Component - Uses simple session check
 const ProtectedRoute = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const session = getSession();
-    setIsAuthenticated(!!session);
-    setIsLoading(false);
+    const checkAuth = () => {
+      try {
+        const user = getSession();
+        setIsAuthenticated(!!user);
+      } catch (error) {
+        console.error('Auth check failed:', error.message);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkAuth();
+    
+    // Subscribe to auth events
+    const unsubLogin = eventBus.subscribe(EventTypes.AUTH.LOGIN, () => {
+      setIsAuthenticated(true);
+    });
+    
+    const unsubLogout = eventBus.subscribe(EventTypes.AUTH.LOGOUT, () => {
+      setIsAuthenticated(false);
+    });
+    
+    const unsubExpired = eventBus.subscribe(EventTypes.AUTH.SESSION_EXPIRED, () => {
+      setIsAuthenticated(false);
+    });
+    
+    return () => {
+      unsubLogin();
+      unsubLogout();
+      unsubExpired();
+    };
   }, []);
 
   if (isLoading) return <Loading />;
@@ -125,7 +175,7 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-// Navigation Component
+// Navigation Component - Uses simple session helpers
 const Navigation = () => {
   const [user, setUser] = useState(null);
   const [country, setCountry] = useState(null);
@@ -133,26 +183,49 @@ const Navigation = () => {
 
   useEffect(() => {
     const updateState = () => {
-      setUser(getSession());
-      setCountry(getSelectedCountry());
+      try {
+        const currentUser = getSession();
+        const currentCountry = getSelectedCountry();
+        setUser(currentUser);
+        setCountry(currentCountry);
+      } catch (error) {
+        console.error('Failed to update navigation state:', error.message);
+      }
     };
 
     updateState();
-    window.addEventListener('mfe:session-changed', updateState);
-    window.addEventListener('mfe:country-changed', updateState);
+    
+    // Subscribe to events
+    const unsubLogin = eventBus.subscribe(EventTypes.AUTH.LOGIN, (data) => {
+      setUser(data.user);
+    });
+    
+    const unsubLogout = eventBus.subscribe(EventTypes.AUTH.LOGOUT, () => {
+      setUser(null);
+      setCountry(null);
+    });
+    
+    const unsubCountry = eventBus.subscribe(EventTypes.STATE.COUNTRY_SELECTED, (data) => {
+      setCountry(data.country);
+    });
 
     return () => {
-      window.removeEventListener('mfe:session-changed', updateState);
-      window.removeEventListener('mfe:country-changed', updateState);
+      unsubLogin();
+      unsubLogout();
+      unsubCountry();
     };
   }, []);
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('mfe_auth_session');
-    sessionStorage.removeItem('mfe_selected_country');
-    window.dispatchEvent(new CustomEvent('mfe:session-changed', { detail: { user: null } }));
-    window.location.href = '/login';
-  };
+  const handleLogout = useCallback(() => {
+    try {
+      sessionStorage.removeItem(AUTH_KEY);
+      sessionStorage.removeItem(COUNTRY_KEY);
+      eventBus.publish(EventTypes.AUTH.LOGOUT, {});
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout failed:', error.message);
+    }
+  }, []);
 
   return (
     <header className="shell-header">
@@ -191,6 +264,19 @@ const Navigation = () => {
 
 // Main App
 function App() {
+  useEffect(() => {
+    console.log('Shell application initialized');
+    
+    // Subscribe to global error events
+    const unsubError = eventBus.subscribe(EventTypes.SYSTEM.ERROR, (data) => {
+      console.error('Global error handler: MFE error', data);
+    });
+
+    return () => {
+      unsubError();
+    };
+  }, []);
+
   return (
     <BrowserRouter>
       <div className="shell-container">

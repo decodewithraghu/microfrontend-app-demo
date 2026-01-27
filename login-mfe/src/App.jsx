@@ -3,7 +3,10 @@ import LoginForm from './components/LoginForm';
 import CountryList from './components/CountryList';
 import './styles.css';
 
-// Auth helpers
+// Import shared eventBus for cross-MFE communication
+import { eventBus, EventTypes } from '@mfe/shared';
+
+// Auth helpers - using same key as shared authService
 const AUTH_KEY = 'mfe_auth_session';
 const COUNTRY_KEY = 'mfe_selected_country';
 
@@ -29,6 +32,10 @@ const setSession = (user) => {
   };
   const encrypted = encryptData(sessionData);
   sessionStorage.setItem(AUTH_KEY, encrypted);
+  
+  // Publish to shared eventBus so Shell knows about the login
+  eventBus.publish(EventTypes.AUTH.LOGIN, { user });
+  
   window.dispatchEvent(new CustomEvent('mfe:session-changed', { detail: { user } }));
 };
 
@@ -46,6 +53,10 @@ const getSession = () => {
 const setSelectedCountry = (country) => {
   const encrypted = encryptData(country);
   sessionStorage.setItem(COUNTRY_KEY, encrypted);
+  
+  // Publish to shared eventBus
+  eventBus.publish(EventTypes.STATE.COUNTRY_SELECTED, { country });
+  
   window.dispatchEvent(new CustomEvent('mfe:country-changed', { detail: { country } }));
 };
 
@@ -59,6 +70,7 @@ function App({ showCountries = false }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCountry, setSelectedCountryState] = useState(null);
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
 
   useEffect(() => {
     const session = getSession();
@@ -83,9 +95,19 @@ function App({ showCountries = false }) {
     };
   }, []);
 
+  // Handle redirect after login
+  useEffect(() => {
+    if (justLoggedIn && user && !showCountries) {
+      console.log('Redirecting to /countries after login...');
+      window.location.href = '/countries';
+    }
+  }, [justLoggedIn, user, showCountries]);
+
   const handleLogin = (userData) => {
+    console.log('Login successful, setting session...');
     setSession(userData);
     setUser(userData);
+    setJustLoggedIn(true);
   };
 
   const handleCountrySelect = (country) => {
@@ -110,11 +132,13 @@ function App({ showCountries = false }) {
     );
   }
 
-  // If user is logged in but showCountries is false, redirect to countries
+  // If user is logged in but showCountries is false, show redirecting message
   if (user && !showCountries) {
-    // Navigate to countries page
-    window.location.href = '/countries';
-    return null;
+    return (
+      <div className="mfe-container login-mfe">
+        <div className="loading">Redirecting to countries...</div>
+      </div>
+    );
   }
 
   // Show login form
