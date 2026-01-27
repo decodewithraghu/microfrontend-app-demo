@@ -621,7 +621,49 @@ stateStore.select('errors');
 
 ## Error Handling
 
-### ErrorBoundary.jsx
+The Shell provides comprehensive error handling when MFEs fail to load. This includes a user-friendly error page with recovery options.
+
+### ErrorPage Component
+
+When an MFE fails to load, users see a dedicated error page with:
+- Clear error message and description
+- Helpful troubleshooting hints
+- **Try Again** button - reloads the current page
+- **Go to Home** button - redirects to the login/home page
+
+```javascript
+// Error Page Component
+const ErrorPage = ({ error, onRetry, onGoHome }) => (
+  <div className="error-page">
+    <div className="error-page-content">
+      <div className="error-icon">⚠️</div>
+      <h1 className="error-title">Oops! Something went wrong</h1>
+      <h2 className="error-subtitle">Failed to load micro frontend</h2>
+      <p className="error-message">
+        {error?.message || 'An unexpected error occurred while loading the application.'}
+      </p>
+      <div className="error-details">
+        <p>This could be due to:</p>
+        <ul>
+          <li>Network connectivity issues</li>
+          <li>The micro frontend service is temporarily unavailable</li>
+          <li>An internal application error</li>
+        </ul>
+      </div>
+      <div className="error-actions">
+        <button onClick={onRetry} className="error-btn error-btn-retry">
+          🔄 Try Again
+        </button>
+        <button onClick={onGoHome} className="error-btn error-btn-home">
+          🏠 Go to Home
+        </button>
+      </div>
+    </div>
+  </div>
+);
+```
+
+### ErrorBoundary Component
 
 ```javascript
 import React from 'react';
@@ -638,7 +680,7 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log error
+    // Log error to console for debugging
     console.error('MFE Error:', error, errorInfo);
     
     // Publish error event
@@ -654,18 +696,24 @@ class ErrorBoundary extends React.Component {
     }
   }
 
-  handleReset = () => {
+  handleRetry = () => {
     this.setState({ hasError: false, error: null });
+    window.location.reload();
+  };
+
+  handleGoHome = () => {
+    this.setState({ hasError: false, error: null });
+    window.location.href = '/login';
   };
 
   render() {
     if (this.state.hasError) {
-      return this.props.fallback || (
-        <div className="error-boundary">
-          <h2>Something went wrong</h2>
-          <p>{this.state.error?.message}</p>
-          <button onClick={this.handleReset}>Try Again</button>
-        </div>
+      return (
+        <ErrorPage 
+          error={this.state.error} 
+          onRetry={this.handleRetry} 
+          onGoHome={this.handleGoHome} 
+        />
       );
     }
 
@@ -675,6 +723,56 @@ class ErrorBoundary extends React.Component {
 
 export default ErrorBoundary;
 ```
+
+### Error Page Styling
+
+The error page includes smooth animations and responsive design:
+
+```css
+/* Error Page Styles */
+.error-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 2rem;
+}
+
+.error-page-content {
+  background: white;
+  border-radius: 20px;
+  padding: 3rem;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.error-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.error-btn-retry {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.error-btn-home {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  color: white;
+}
+```
+
+### Testing Error Handling
+
+To test the error page functionality:
+
+1. **Stop an MFE server** - Run only the shell without one of the MFE services
+2. **Modify remote URL** - Change the port in `vite.config.js` to a non-existent one
+3. **Block network requests** - Use browser DevTools to block MFE requests
+4. **Simulate error** - Add `throw new Error('Test')` in an MFE component
 
 ---
 

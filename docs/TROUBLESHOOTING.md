@@ -161,6 +161,17 @@ import './styles/index.css'; // Not dynamic import
 **Symptoms:**
 - Blank area where MFE should be
 - Console errors about failed imports
+- Error page displayed with "Failed to load micro frontend" message
+
+**What Users See:**
+
+When an MFE fails to load, the Shell displays a user-friendly error page with:
+- ⚠️ Warning icon with animation
+- Clear error title: "Oops! Something went wrong"
+- Error details explaining possible causes
+- Two action buttons:
+  - **🔄 Try Again** - Reloads the current page
+  - **🏠 Go to Home** - Redirects to the login page
 
 **Solutions:**
 
@@ -187,7 +198,17 @@ federation({
     'react-dom': { singleton: true },
   },
 });
+
+// 5. Ensure all MFE servers are running
+// Check ports: 5001 (login), 5002 (weather), 5003 (population)
 ```
+
+**Testing MFE Failure:**
+
+To test the error handling:
+1. Stop one of the MFE dev servers
+2. Navigate to that MFE's route in the shell
+3. The error page should appear with recovery options
 
 ---
 

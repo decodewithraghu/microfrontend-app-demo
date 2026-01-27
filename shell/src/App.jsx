@@ -41,6 +41,34 @@ const Loading = () => (
   </div>
 );
 
+// Error Page Component
+const ErrorPage = ({ error, onRetry, onGoHome }) => (
+  <div className="error-page">
+    <div className="error-page-content">
+      <div className="error-icon">⚠️</div>
+      <h1 className="error-title">Oops! Something went wrong</h1>
+      <h2 className="error-subtitle">Failed to load micro frontend</h2>
+      <p className="error-message">{error?.message || 'An unexpected error occurred while loading the application.'}</p>
+      <div className="error-details">
+        <p>This could be due to:</p>
+        <ul>
+          <li>Network connectivity issues</li>
+          <li>The micro frontend service is temporarily unavailable</li>
+          <li>An internal application error</li>
+        </ul>
+      </div>
+      <div className="error-actions">
+        <button onClick={onRetry} className="error-btn error-btn-retry">
+          🔄 Try Again
+        </button>
+        <button onClick={onGoHome} className="error-btn error-btn-home">
+          🏠 Go to Home
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 // Error Boundary
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -52,14 +80,29 @@ class ErrorBoundary extends React.Component {
     return { hasError: true, error };
   }
 
+  componentDidCatch(error, errorInfo) {
+    // Log error to console for debugging
+    console.error('MFE Error:', error, errorInfo);
+  }
+
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null });
+    window.location.reload();
+  };
+
+  handleGoHome = () => {
+    this.setState({ hasError: false, error: null });
+    window.location.href = '/login';
+  };
+
   render() {
     if (this.state.hasError) {
       return (
-        <div className="error-container">
-          <h2>⚠️ Failed to load micro frontend</h2>
-          <p>{this.state.error?.message || 'Unknown error occurred'}</p>
-          <button onClick={() => window.location.reload()}>Retry</button>
-        </div>
+        <ErrorPage 
+          error={this.state.error} 
+          onRetry={this.handleRetry} 
+          onGoHome={this.handleGoHome} 
+        />
       );
     }
     return this.props.children;
