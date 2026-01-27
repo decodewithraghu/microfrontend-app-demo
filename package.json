@@ -1,0 +1,39 @@
+{
+  "name": "mfe-application",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "shell",
+    "login-mfe",
+    "weather-mfe",
+    "population-mfe"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm run install:mfes",
+    "install:mfes": "cd shell && npm install && cd ../login-mfe && npm install && cd ../weather-mfe && npm install && cd ../population-mfe && npm install",
+    "dev": "concurrently \"npm run dev:login\" \"npm run dev:weather\" \"npm run dev:population\" \"npm run dev:shell\"",
+    "dev:shell": "cd shell && npm run dev",
+    "dev:login": "cd login-mfe && npm run dev",
+    "dev:weather": "cd weather-mfe && npm run dev",
+    "dev:population": "cd population-mfe && npm run dev",
+    "build": "npm run build:login && npm run build:weather && npm run build:population && npm run build:shell",
+    "build:shell": "cd shell && npm run build",
+    "build:login": "cd login-mfe && npm run build",
+    "build:weather": "cd weather-mfe && npm run build",
+    "build:population": "cd population-mfe && npm run build",
+    "preview": "concurrently \"npm run preview:login\" \"npm run preview:weather\" \"npm run preview:population\" \"npm run preview:shell\"",
+    "preview:shell": "cd shell && npm run preview",
+    "preview:login": "cd login-mfe && npm run preview",
+    "preview:weather": "cd weather-mfe && npm run preview",
+    "preview:population": "cd population-mfe && npm run preview",
+    "test": "npm run test:unit",
+    "test:unit": "jest --config jest.config.cjs",
+    "test:unit:watch": "jest --config jest.config.cjs --watch",
+    "test:unit:coverage": "jest --config jest.config.cjs --coverage"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "jest": "^29.7.0"
+  }
+}
