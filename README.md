@@ -2,6 +2,18 @@
 
 A complete micro frontend architecture demonstration using **React**, **Vite**, and **Module Federation**.
 
+## � Recent Updates (January 2026)
+
+### Architecture Enhancements
+- ✅ **Updated Architecture Diagrams** - 17 Mermaid diagrams including mindmaps
+- ✅ **Cross-MFE Communication** - Shell and Login MFE now use compatible session formats
+- ✅ **EventBus Integration** - Login MFE publishes events to shared EventBus
+- ✅ **New Shared Library Modules** - Added analytics, apiGateway, crypto, featureFlags, logger, performanceMonitor, security
+
+### Documentation
+- 📚 New [Architecture Diagrams](./docs/ARCHITECTURE_DIAGRAMS_UPDATED.md) with Mermaid diagrams
+- 📚 Updated [Documentation Index](./docs/README.md) with quick start guide
+
 ## 🏗️ Architecture Overview
 
 ```
@@ -25,12 +37,12 @@ A complete micro frontend architecture demonstration using **React**, **Vite**, 
 │  └─────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
                               ▲
-                              │ Shared Session (Encrypted)
-                              │ Event Bus Communication
+                              │ Shared Session (Base64 Encoded)
+                              │ EventBus Communication
                               ▼
                     ┌─────────────────────┐
                     │   Session Storage   │
-                    │   (Encrypted Data)  │
+                    │   + Event Bus       │
                     └─────────────────────┘
 ```
 
@@ -39,11 +51,27 @@ A complete micro frontend architecture demonstration using **React**, **Vite**, 
 ```
 mfe-app/
 ├── package.json          # Root package with workspace scripts
-├── shared/               # Shared authentication & event utilities
+├── docs/                 # 📚 Documentation
+│   ├── README.md         # Documentation index
+│   ├── ARCHITECTURE.md   # Architecture overview
+│   ├── ARCHITECTURE_DIAGRAMS_UPDATED.md  # 🆕 Mermaid diagrams
+│   └── ...               # API docs, guides, troubleshooting
+├── diagrams/             # 🖼️ Architecture diagram images
+├── shared/               # Shared library (@mfe/shared)
 │   └── src/
-│       ├── auth.js       # Session management with encryption
-│       ├── events.js     # Cross-MFE event bus
-│       └── index.js
+│       ├── eventBus.js   # 📡 Pub/Sub event system
+│       ├── stateStore.js # 📦 Centralized state management
+│       ├── authService.js # 🔐 Authentication service
+│       ├── middleware.js # ⚙️ Event middleware
+│       ├── hooks.js      # 🪝 React hooks
+│       ├── analytics.js  # 🆕 Analytics tracking
+│       ├── apiGateway.js # 🆕 API gateway
+│       ├── crypto.js     # 🆕 Crypto utilities
+│       ├── featureFlags.js # 🆕 Feature flags
+│       ├── logger.js     # 🆕 Logging service
+│       ├── performanceMonitor.js # 🆕 Performance monitoring
+│       ├── security.js   # 🆕 Security utilities
+│       └── index.js      # Main exports
 ├── shell/                # Host application (Port 3000)
 │   ├── src/
 │   │   ├── App.jsx       # Main routing & layout
@@ -52,26 +80,16 @@ mfe-app/
 │   └── vite.config.js    # Module Federation config
 ├── login-mfe/            # Login & Countries MFE (Port 3001)
 │   ├── src/
-│   │   ├── App.jsx
+│   │   ├── App.jsx       # 🔄 Updated with EventBus
 │   │   ├── components/
 │   │   │   ├── LoginForm.jsx
 │   │   │   └── CountryList.jsx
 │   │   └── styles.css
 │   └── vite.config.js
 ├── weather-mfe/          # Weather Display MFE (Port 3002)
-│   ├── src/
-│   │   ├── App.jsx
-│   │   ├── components/
-│   │   │   └── WeatherDisplay.jsx
-│   │   └── styles.css
-│   └── vite.config.js
+│   └── ...
 └── population-mfe/       # Population Stats MFE (Port 3003)
-    ├── src/
-    │   ├── App.jsx
-    │   ├── components/
-    │   │   └── PopulationDisplay.jsx
-    │   └── styles.css
-    └── vite.config.js
+    └── ...
 ```
 
 ## 🚀 Getting Started
@@ -91,10 +109,23 @@ cd mfe-app
 npm run install:all
 ```
 
-### Development Mode
+### ⚠️ Important: Module Federation Requires Build
+
+Module Federation only works in **preview mode** (after building). The `remoteEntry.js` files are only generated during the build process.
+
+```bash
+# Build all MFEs first (generates remoteEntry.js)
+npm run build
+
+# Then run in preview mode
+npm run preview
+```
+
+### Development Mode (Limited)
 
 ```bash
 # Start all MFEs in development mode
+# Note: Module Federation won't work, MFEs run independently
 npm run dev
 ```
 
@@ -117,13 +148,15 @@ npm run preview
 ## 🔐 Security Features
 
 ### Session Management
-- **Encrypted Storage**: Session data is encrypted using Base64 + URI encoding
+- **Base64 Encoding**: Session data is encoded using Base64 + URI encoding for safe storage
 - **Expiration**: Sessions auto-expire after 24 hours
-- **Token Validation**: API calls validate auth tokens with timestamp checks
+- **Shared Format**: Shell and Login MFE use compatible session formats
+- **Keys**: `mfe_auth_session`, `mfe_selected_country`
 
 ### Cross-MFE Communication
-- **Event Bus**: Secure custom events for state synchronization
-- **Scoped Storage**: Each MFE accesses shared state through controlled APIs
+- **EventBus**: Pub/Sub system for real-time state synchronization
+- **Event Types**: AUTH.LOGIN, AUTH.LOGOUT, STATE.COUNTRY_SELECTED, etc.
+- **Middleware Support**: Log, validate, and transform events
 - **No Direct DOM Access**: MFEs communicate only through the event system
 
 ## 🔑 Demo Credentials
@@ -140,6 +173,7 @@ npm run preview
 - User authentication with demo credentials
 - Country selection from REST Countries API
 - Session persistence across MFEs
+- 🆕 EventBus integration for cross-MFE communication
 
 ### Weather MFE
 - Real-time weather data from Open-Meteo API (free, no API key required)
@@ -155,8 +189,9 @@ npm run preview
 
 - **React 18** - UI Framework
 - **Vite 5** - Build Tool
-- **Module Federation** - Micro Frontend Architecture
+- **@originjs/vite-plugin-federation** - Module Federation Plugin
 - **React Router 6** - Navigation
+- **Base64 Encoding** - Session storage encoding
 
 ## 📡 APIs Used
 
@@ -171,20 +206,33 @@ npm run preview
 ```
 1. User logs in (Login MFE)
       ↓
-2. Session stored encrypted in sessionStorage
+2. Session stored (Base64 encoded) in sessionStorage
       ↓
-3. Event dispatched: 'mfe:session-changed'
+3. EventBus publishes: AUTH.LOGIN event
       ↓
 4. Shell & other MFEs receive session update
       ↓
 5. User selects country (Login MFE)
       ↓
-6. Country stored encrypted in sessionStorage
+6. Country stored (Base64 encoded) in sessionStorage
       ↓
-7. Event dispatched: 'mfe:country-changed'
+7. EventBus publishes: STATE.COUNTRY_SELECTED event
       ↓
 8. Weather & Population MFEs fetch data for selected country
 ```
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Architecture Diagrams](./docs/ARCHITECTURE_DIAGRAMS_UPDATED.md) | 🆕 17 Mermaid diagrams including mindmaps |
+| [Getting Started](./docs/GETTING_STARTED.md) | Quick start guide |
+| [Architecture](./docs/ARCHITECTURE.md) | Architecture overview |
+| [EventBus API](./docs/API_EVENT_BUS.md) | EventBus documentation |
+| [State Store API](./docs/API_STATE_STORE.md) | State management |
+| [Auth Service API](./docs/API_AUTH_SERVICE.md) | Authentication service |
+| [Testing](./docs/TESTING.md) | Testing guide |
+| [Troubleshooting](./docs/TROUBLESHOOTING.md) | Common issues & solutions |
 
 ## 🧪 Testing Individual MFEs
 
@@ -200,6 +248,53 @@ cd weather-mfe && npm run dev
 # Population MFE only
 cd population-mfe && npm run dev
 ```
+
+### Running Unit Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests for specific MFE
+cd login-mfe && npm test
+cd weather-mfe && npm test
+cd population-mfe && npm test
+cd shared && npm test
+```
+
+## 🐛 Troubleshooting
+
+### Blank Page on Load
+Module Federation requires built `remoteEntry.js` files. Run:
+```bash
+npm run build
+npm run preview
+```
+
+### Session Not Persisting
+Clear browser sessionStorage and try again:
+```javascript
+sessionStorage.clear()
+```
+
+### MFE Not Loading
+Check that all MFEs are running on their respective ports:
+- Shell: http://localhost:3000
+- Login MFE: http://localhost:3001
+- Weather MFE: http://localhost:3002
+- Population MFE: http://localhost:3003
+
+## 📄 License
+
+MIT
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 📝 License
 
