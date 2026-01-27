@@ -69,15 +69,15 @@ logout();
 
 ## Security Features
 
-### Data Encryption
+### Data Encoding
 
-All session data is encrypted before storage:
+Session data is encoded before storage using Base64:
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                 Encryption Flow                      │
+│                  Encoding Flow                      │
 │                                                      │
-│  Data → JSON → URL Encode → XOR Cipher → Base64    │
+│  Data → JSON.stringify → encodeURIComponent → btoa │
 │                                                      │
 │  { user: 'john' }                                   │
 │       ↓                                              │
@@ -85,10 +85,43 @@ All session data is encrypted before storage:
 │       ↓                                              │
 │  '%7B%22user%22%3A%22john%22%7D'                    │
 │       ↓                                              │
-│  'encrypted_string'                                 │
-│       ↓                                              │
-│  'YmFzZTY0X2VuY29kZWQ='                             │
+│  'JTdCJTIydXNlciUyMiUzQSUyMmpvaG4lMjIlN0Q='        │
 └─────────────────────────────────────────────────────┘
+```
+
+**Implementation (used by Login MFE and Shell):**
+
+```javascript
+// Encode data
+const encryptData = (data) => {
+  const jsonStr = JSON.stringify(data);
+  return btoa(encodeURIComponent(jsonStr));
+};
+
+// Decode data
+const decryptData = (encrypted) => {
+  try {
+    const jsonStr = decodeURIComponent(atob(encrypted));
+    return JSON.parse(jsonStr);
+  } catch {
+    return null;
+  }
+};
+```
+
+### Session Storage Format
+
+```javascript
+// Stored in sessionStorage with key 'mfe_auth_session'
+{
+  user: {
+    username: 'admin',
+    name: 'Administrator',
+    role: 'admin'
+  },
+  timestamp: 1706360000000,
+  expiresAt: 1706446400000  // 24 hours later
+}
 ```
 
 ### Integrity Verification

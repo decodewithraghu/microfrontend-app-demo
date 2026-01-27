@@ -52,6 +52,14 @@ This guide covers deployment strategies and best practices for the micro fronten
 
 ## Build Process
 
+### ⚠️ Important: Build Order Matters
+
+Module Federation requires the `remoteEntry.js` files to be generated during build. Always build in this order:
+
+1. **Shared Library** - Must be built first as MFEs depend on it
+2. **MFEs** (Login, Weather, Population) - Can be built in parallel
+3. **Shell** - Must be built last as it references MFE remoteEntry.js files
+
 ### Building All Projects
 
 ```bash
@@ -61,19 +69,19 @@ This guide covers deployment strategies and best practices for the micro fronten
 echo "Building shared library..."
 cd shared && npm run build && cd ..
 
-echo "Building Login MFE..."
-cd login-mfe && npm run build && cd ..
-
-echo "Building Weather MFE..."
-cd weather-mfe && npm run build && cd ..
-
-echo "Building Population MFE..."
-cd population-mfe && npm run build && cd ..
+echo "Building MFEs in parallel..."
+npm run build:mfes
 
 echo "Building Shell..."
 cd shell && npm run build && cd ..
 
 echo "Build complete!"
+```
+
+Or use the npm script:
+
+```bash
+npm run build
 ```
 
 ### package.json Scripts

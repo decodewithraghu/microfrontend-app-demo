@@ -182,17 +182,23 @@ The **EventBus** provides loosely-coupled communication:
 │  Login MFE  │         │  EventBus   │         │ Weather MFE │
 └──────┬──────┘         └──────┬──────┘         └──────┬──────┘
        │                       │                       │
-       │  publish(LOGIN)       │                       │
+       │  publish(AUTH.LOGIN)  │                       │
        │──────────────────────►│                       │
-       │                       │  notify(LOGIN)        │
+       │                       │  notify(AUTH.LOGIN)   │
        │                       │──────────────────────►│
        │                       │                       │
-       │  publish(COUNTRY)     │                       │
+       │  publish(STATE.       │                       │
+       │  COUNTRY_SELECTED)    │                       │
        │──────────────────────►│                       │
-       │                       │  notify(COUNTRY)      │
+       │                       │  notify(COUNTRY_SELECTED)
        │                       │──────────────────────►│
        │                       │                       │
 ```
+
+**Actual Event Types Used:**
+- `EventTypes.AUTH.LOGIN` - Published when user logs in
+- `EventTypes.AUTH.LOGOUT` - Published when user logs out
+- `EventTypes.STATE.COUNTRY_SELECTED` - Published when country is selected
 
 ### 2. State-Based
 

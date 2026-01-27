@@ -22,6 +22,18 @@ This guide covers testing strategies for the micro frontend application includin
 
 ## Testing Strategy
 
+### ⚠️ Important Note on Integration Testing
+
+**Module Federation requires build before testing.** For integration tests involving multiple MFEs:
+
+```bash
+# Build all MFEs first
+npm run build
+
+# Then run preview for E2E tests
+npm run preview
+```
+
 ### Testing Pyramid
 
 ```

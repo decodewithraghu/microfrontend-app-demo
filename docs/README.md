@@ -155,6 +155,7 @@ npm run preview
 | Module Federation | @originjs/vite-plugin-federation |
 | State Management | Custom StateStore (Redux-like) |
 | Communication | Custom EventBus (Pub-Sub) |
+| Session Storage | Base64 Encoded sessionStorage |
 | Styling | CSS Modules / CSS-in-JS |
 | Unit Testing | Jest 29.7.0 + React Testing Library |
 | E2E Testing | Cypress 13.6.0 |
@@ -164,10 +165,10 @@ npm run preview
 
 ## 🔒 Security Features
 
-1. **Session Encryption**: XOR cipher with key rotation + Base64 encoding
-2. **Token Validation**: JWT-style tokens with signature verification
-3. **Automatic Session Refresh**: Sliding expiration with refresh tokens
-4. **Role-Based Access Control**: Admin, User, Guest roles with permissions
+1. **Session Encoding**: Base64 + URI encoding for session data
+2. **Session Expiration**: 24-hour session timeout
+3. **EventBus Communication**: Pub-Sub for cross-MFE events
+4. **Role-Based Access Control**: Admin, User, Guest roles
 5. **Protected Routes**: Authentication required for Weather/Population MFEs
 
 ---
@@ -176,6 +177,7 @@ npm run preview
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 3.0.0 | Jan 2026 | Architecture diagrams, EventBus integration, session format update |
 | 2.0.0 | 2024 | Enterprise pub-sub, state store, middleware system |
 | 1.0.0 | 2024 | Initial MFE implementation |
 

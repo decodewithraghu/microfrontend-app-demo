@@ -153,51 +153,99 @@ export default defineConfig({
 
 ### App.jsx
 
-```javascript
-import React, { useEffect } from 'react';
-import { BrowserRouter } from 'react-router-dom';
-import {
-  useAuth,
-  useEventBus,
-  EventTypes,
-  eventBus,
-  stateStore,
-} from '@mfe/shared';
+The Shell uses simple session helpers compatible with Login MFE:
 
-import Header from './components/Header';
-import Sidebar from './components/Sidebar';
-import Footer from './components/Footer';
-import Notifications from './components/Notifications';
-import ErrorBoundary from './components/ErrorBoundary';
-import Routes from './routes';
+```javascript
+import React, { Suspense, useState, useEffect, lazy } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
+
+// Import core shared library services
+import { eventBus, EventTypes, store } from '@mfe/shared';
+
+// Simple session helpers (compatible with Login MFE)
+const AUTH_KEY = 'mfe_auth_session';
+const COUNTRY_KEY = 'mfe_selected_country';
+
+const decryptData = (encrypted) => {
+  try {
+    const jsonStr = decodeURIComponent(atob(encrypted));
+    return JSON.parse(jsonStr);
+  } catch {
+    return null;
+  }
+};
+
+const getSession = () => {
+  const encrypted = sessionStorage.getItem(AUTH_KEY);
+  if (!encrypted) return null;
+  const sessionData = decryptData(encrypted);
+  if (!sessionData || Date.now() > sessionData.expiresAt) {
+    sessionStorage.removeItem(AUTH_KEY);
+    return null;
+  }
+  return sessionData.user;
+};
+
+const getSelectedCountry = () => {
+  const encrypted = sessionStorage.getItem(COUNTRY_KEY);
+  if (!encrypted) return null;
+  return decryptData(encrypted);
+};
+
+// Lazy load remote MFEs
+const LoginApp = lazy(() => import('loginMfe/LoginApp'));
+const WeatherApp = lazy(() => import('weatherMfe/WeatherApp'));
+const PopulationApp = lazy(() => import('populationMfe/PopulationApp'));
 
 function App() {
-  const { isAuthenticated, user } = useAuth();
+  // ... component implementation
+}
 
-  // Initialize shared services on mount
+export default App;
+```
+
+### ProtectedRoute Component
+
+```javascript
+const ProtectedRoute = ({ children }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    // Restore state from session storage
-    stateStore.restore();
+    const checkAuth = () => {
+      try {
+        const user = getSession();
+        setIsAuthenticated(!!user);
+      } catch (error) {
+        console.error('Auth check failed:', error.message);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    // Log shell mount
-    eventBus.publish(EventTypes.SYSTEM.MFE_MOUNTED, {
-      name: 'Shell',
-      timestamp: Date.now(),
+    checkAuth();
+    
+    // Subscribe to auth events from EventBus
+    const unsubLogin = eventBus.subscribe(EventTypes.AUTH.LOGIN, () => {
+      setIsAuthenticated(true);
     });
-
+    
+    const unsubLogout = eventBus.subscribe(EventTypes.AUTH.LOGOUT, () => {
+      setIsAuthenticated(false);
+    });
+    
     return () => {
-      eventBus.publish(EventTypes.SYSTEM.MFE_UNMOUNTED, {
-        name: 'Shell',
-        timestamp: Date.now(),
-      });
+      unsubLogin();
+      unsubLogout();
     };
   }, []);
 
-  // Listen for navigation events from MFEs
-  useEventBus(EventTypes.UI.NAVIGATE, (payload) => {
-    if (payload.path) {
-      window.history.pushState({}, '', payload.path);
-    }
+  if (isLoading) return <Loading />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return children;
+};
+```
   });
 
   return (

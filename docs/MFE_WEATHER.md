@@ -2,7 +2,7 @@
 
 ## Weather Display Micro Frontend
 
-The Weather MFE displays weather information for the selected country, fetching data from the OpenWeatherMap API.
+The Weather MFE displays weather information for the selected country, fetching data from the **Open-Meteo API** (free, no API key required).
 
 ---
 
@@ -49,12 +49,12 @@ The Weather MFE displays weather information for the selected country, fetching 
 
 | Feature | Description |
 |---------|-------------|
-| Real-time Data | Fetches current weather from OpenWeatherMap API |
-| Auto-update | Listens for country selection changes |
-| Caching | Caches API responses for performance |
+| Real-time Data | Fetches current weather from Open-Meteo API (free) |
+| 7-Day Forecast | Extended weather forecast |
+| Auto-update | Listens for country selection via EventBus |
+| No API Key | Uses Open-Meteo which requires no authentication |
 | Error Handling | Graceful degradation with retry options |
 | Responsive | Works on all screen sizes |
-| Loading States | Visual feedback during data fetch |
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## Population Statistics Micro Frontend
 
-The Population MFE displays population statistics and demographic charts for the selected country using the REST Countries API data.
+The Population MFE displays population statistics and demographic information for the selected country using the **REST Countries API** and **World Bank API** data.
 
 ---
 
@@ -57,10 +57,10 @@ The Population MFE displays population statistics and demographic charts for the
 |---------|-------------|
 | Population Stats | Display population, area, density |
 | Regional Comparison | Compare with countries in same region |
-| Interactive Charts | Visual bar charts for comparisons |
-| Data Cards | Key statistics in card format |
-| Auto-update | Reacts to country selection changes |
-| Responsive | Adapts to all screen sizes |
+| Demographics | Languages, currencies, capital city |
+| Auto-update | Reacts to country selection via EventBus |
+| REST Countries API | Primary data source for country info |
+| World Bank API | Historical population data |
 
 ---
 

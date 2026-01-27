@@ -133,21 +133,67 @@ export default defineConfig({
 
 ### App.jsx (Main Export)
 
+The Login MFE uses a simple session format compatible with the Shell:
+
 ```javascript
-import React from 'react';
-import { useMFELifecycle } from '@mfe/shared';
+import React, { useState, useEffect } from 'react';
 import LoginForm from './components/LoginForm';
-import './styles/Login.css';
+import CountryList from './components/CountryList';
+import './styles.css';
 
-function App() {
-  // Track MFE lifecycle
-  useMFELifecycle('LoginMFE');
+// Import shared eventBus for cross-MFE communication
+import { eventBus, EventTypes } from '@mfe/shared';
 
-  return (
-    <div className="login-mfe">
-      <LoginForm />
-    </div>
-  );
+// Auth helpers - using Base64 encoding
+const AUTH_KEY = 'mfe_auth_session';
+const COUNTRY_KEY = 'mfe_selected_country';
+
+const encryptData = (data) => {
+  const jsonStr = JSON.stringify(data);
+  return btoa(encodeURIComponent(jsonStr));
+};
+
+const decryptData = (encrypted) => {
+  try {
+    const jsonStr = decodeURIComponent(atob(encrypted));
+    return JSON.parse(jsonStr);
+  } catch {
+    return null;
+  }
+};
+
+const setSession = (user) => {
+  const sessionData = {
+    user,
+    timestamp: Date.now(),
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+  };
+  const encrypted = encryptData(sessionData);
+  sessionStorage.setItem(AUTH_KEY, encrypted);
+  
+  // Publish to shared eventBus so Shell knows about the login
+  eventBus.publish(EventTypes.AUTH.LOGIN, { user });
+  
+  window.dispatchEvent(new CustomEvent('mfe:session-changed', { detail: { user } }));
+};
+
+const setSelectedCountry = (country) => {
+  const encrypted = encryptData(country);
+  sessionStorage.setItem(COUNTRY_KEY, encrypted);
+  
+  // Publish to shared eventBus
+  eventBus.publish(EventTypes.STATE.COUNTRY_SELECTED, { country });
+  
+  window.dispatchEvent(new CustomEvent('mfe:country-changed', { detail: { country } }));
+};
+
+function App({ showCountries = false }) {
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedCountry, setSelectedCountryState] = useState(null);
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
+
+  // ... component logic
 }
 
 export default App;
@@ -155,49 +201,74 @@ export default App;
 
 ### LoginForm.jsx
 
+Simple login form with demo credentials validation:
+
 ```javascript
 import React, { useState } from 'react';
-import {
-  useAuth,
-  useEventPublisher,
-  useNotifications,
-  EventTypes,
-} from '@mfe/shared';
 
-function LoginForm() {
-  const [form, setForm] = useState({ username: '', password: '' });
-  const [errors, setErrors] = useState({});
-  
-  const { login, isLoading, error } = useAuth();
-  const publish = useEventPublisher();
-  const { showSuccess, showError } = useNotifications();
+// Demo users for authentication
+const DEMO_USERS = {
+  admin: { password: 'admin123', name: 'Administrator', role: 'admin' },
+  user: { password: 'user123', name: 'Standard User', role: 'user' },
+  guest: { password: 'guest123', name: 'Guest User', role: 'guest' },
+};
 
-  // Form validation
-  const validate = () => {
-    const newErrors = {};
-    
-    if (!form.username.trim()) {
-      newErrors.username = 'Username is required';
-    } else if (form.username.length < 3) {
-      newErrors.username = 'Username must be at least 3 characters';
+function LoginForm({ onLogin }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const demoUser = DEMO_USERS[username];
+    if (demoUser && demoUser.password === password) {
+      const userData = {
+        username,
+        name: demoUser.name,
+        role: demoUser.role,
+      };
+      onLogin(userData);
+    } else {
+      setError('Invalid username or password');
     }
-    
-    if (!form.password) {
-      newErrors.password = 'Password is required';
-    } else if (form.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setIsLoading(false);
   };
 
-  // Handle input changes
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
-    
-    // Clear error on change
+  return (
+    <form onSubmit={handleSubmit} className="login-form">
+      <h2>Sign In</h2>
+      {error && <div className="error">{error}</div>}
+      <input
+        type="text"
+        placeholder="Username"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        required
+      />
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+      />
+      <button type="submit" disabled={isLoading}>
+        {isLoading ? 'Signing in...' : 'Sign In'}
+      </button>
+      <p className="demo-hint">Demo: admin/admin123 or user/user123</p>
+    </form>
+  );
+}
+
+export default LoginForm;
+```
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
     }

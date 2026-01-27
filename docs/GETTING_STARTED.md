@@ -110,9 +110,21 @@ VITE_OPENWEATHER_API_KEY=your_api_key_here
 
 ## Running the Application
 
-### Development Mode
+### ⚠️ Important: Module Federation Requires Build
 
-Start all services concurrently:
+Module Federation only works in **preview mode** (after building). The `remoteEntry.js` files are only generated during the build process.
+
+```bash
+# Build all MFEs first (generates remoteEntry.js)
+npm run build
+
+# Then run in preview mode
+npm run preview
+```
+
+### Development Mode (Limited)
+
+In development mode, MFEs run independently and Module Federation won't work:
 
 ```bash
 # From root directory
@@ -154,15 +166,18 @@ npm run dev
 
 ### Demo Credentials
 
-```
-Admin User:
-  Username: admin
-  Password: admin123
+| Role | Username | Password |
+|------|----------|----------|
+| Admin | admin | admin123 |
+| User | user | user123 |
+| Guest | guest | guest123 |
 
-Regular User:
-  Username: user
-  Password: user123
-```
+### Session Storage
+
+Sessions are stored using Base64 encoding:
+- **Auth Session Key**: `mfe_auth_session`
+- **Country Selection Key**: `mfe_selected_country`
+- **Format**: Base64 encoded JSON with `user`, `timestamp`, `expiresAt`
 
 ---
 

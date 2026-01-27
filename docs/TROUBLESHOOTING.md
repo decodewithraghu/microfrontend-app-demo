@@ -22,6 +22,28 @@ This guide helps diagnose and resolve common issues in the MFE application.
 
 ## Development Issues
 
+### Issue: Blank page after loading (Module Federation)
+
+**Symptoms:**
+- Application shows blank page
+- Console shows `remoteEntry.js` 404 errors
+- MFEs not loading in Shell
+
+**Root Cause:**
+Module Federation only works in **preview mode**. The `remoteEntry.js` files are generated during the build process, not in development mode.
+
+**Solution:**
+
+```bash
+# Always build before preview
+npm run build
+npm run preview
+
+# DO NOT use npm run dev for Module Federation testing
+```
+
+---
+
 ### Issue: MFE fails to start
 
 **Symptoms:**
@@ -95,6 +117,43 @@ npm run build
 # 3. Link the package
 cd shared && npm link
 cd ../shell && npm link @mfe/shared
+```
+
+---
+
+### Issue: Session not shared between Shell and MFEs
+
+**Symptoms:**
+- Login works but Shell doesn't recognize user
+- Redirect after login doesn't work
+- Country selection not persisting
+
+**Root Cause:**
+Session format mismatch between MFEs. Shell and Login MFE must use the same encoding.
+
+**Solution:**
+
+Both Shell and Login MFE should use identical session helpers:
+
+```javascript
+// Session keys
+const AUTH_KEY = 'mfe_auth_session';
+const COUNTRY_KEY = 'mfe_selected_country';
+
+// Encrypt/Decrypt using Base64
+const encryptData = (data) => {
+  const jsonStr = JSON.stringify(data);
+  return btoa(encodeURIComponent(jsonStr));
+};
+
+const decryptData = (encrypted) => {
+  try {
+    const jsonStr = decodeURIComponent(atob(encrypted));
+    return JSON.parse(jsonStr);
+  } catch {
+    return null;
+  }
+};
 ```
 
 ---
