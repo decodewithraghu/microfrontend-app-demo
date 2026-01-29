@@ -8,6 +8,9 @@ import {
   store,
 } from '@mfe/shared';
 
+// PWA Components
+import { PWAStatus, OfflineBanner } from './components/PWAStatus';
+
 // Simple session helpers (compatible with Login MFE)
 const AUTH_KEY = 'mfe_auth_session';
 const COUNTRY_KEY = 'mfe_selected_country';
@@ -280,6 +283,9 @@ function App() {
   return (
     <BrowserRouter>
       <div className="shell-container">
+        {/* PWA Offline Banner */}
+        <OfflineBanner />
+        
         <Navigation />
         <main className="shell-main">
           <ErrorBoundary>
@@ -310,6 +316,9 @@ function App() {
         <footer className="shell-footer">
           <p>© 2026 MFE Application - Micro Frontend Architecture Demo</p>
         </footer>
+        
+        {/* PWA Status & Install Prompt */}
+        <PWAStatus />
       </div>
     </BrowserRouter>
   );
