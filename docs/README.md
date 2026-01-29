@@ -14,6 +14,7 @@ This documentation directory contains complete technical documentation for the M
 | [Getting Started](./GETTING_STARTED.md) | Quick start guide, installation, running the app |
 | [Architecture Overview](./ARCHITECTURE.md) | System architecture, design patterns, data flow |
 | [Architecture Diagrams](./ARCHITECTURE_DIAGRAMS_UPDATED.md) | **Updated Mermaid diagrams** |
+| [PWA Guide](./PWA.md) | **🆕 Progressive Web App** - Offline support, installation, service worker |
 
 ### API Reference
 | Document | Description |
@@ -27,7 +28,7 @@ This documentation directory contains complete technical documentation for the M
 ### MFE Documentation
 | Document | Description |
 |----------|-------------|
-| [Shell Application](./MFE_SHELL.md) | Host container, routing, orchestration |
+| [Shell Application](./MFE_SHELL.md) | Host container, routing, orchestration, **PWA** |
 | [Login MFE](./MFE_LOGIN.md) | Authentication form, validation, session |
 | [Weather MFE](./MFE_WEATHER.md) | Weather display, API integration |
 | [Population MFE](./MFE_POPULATION.md) | Population stats, regional charts |
@@ -129,6 +130,13 @@ npm run preview
 ---
 
 ## 🔑 Key Features
+
+### Progressive Web App (PWA) 🆕
+- **Offline Support**: Service worker caches assets for offline use
+- **Installable**: Users can add the app to their home screen
+- **Update Notifications**: Automatic detection of new versions
+- **Network Status**: Visual indicators for online/offline state
+- **Caching Strategies**: Cache-first for static assets, network-first for APIs
 
 ### Data Sharing & Communication
 - **Enterprise Pub-Sub System**: Type-safe event bus with middleware support

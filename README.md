@@ -2,7 +2,14 @@
 
 A complete micro frontend architecture demonstration using **React**, **Vite**, and **Module Federation**.
 
-## � Recent Updates (January 2026)
+## 🆕 Recent Updates (January 2026)
+
+### PWA Support (New!)
+- ✅ **Progressive Web App** - Shell application is now a full PWA
+- ✅ **Offline Support** - Service worker caches assets for offline use
+- ✅ **Installable** - Users can install the app to their home screen
+- ✅ **Update Notifications** - Automatic detection of new versions
+- ✅ **Network Status** - Visual indicators for online/offline state
 
 ### Architecture Enhancements
 - ✅ **Updated Architecture Diagrams** - 17 Mermaid diagrams including mindmaps
@@ -11,6 +18,7 @@ A complete micro frontend architecture demonstration using **React**, **Vite**, 
 - ✅ **New Shared Library Modules** - Added analytics, apiGateway, crypto, featureFlags, logger, performanceMonitor, security
 
 ### Documentation
+- 📚 New [PWA Guide](./docs/PWA.md) - Progressive Web App documentation
 - 📚 New [Architecture Diagrams](./docs/ARCHITECTURE_DIAGRAMS_UPDATED.md) with Mermaid diagrams
 - 📚 Updated [Documentation Index](./docs/README.md) with quick start guide
 
@@ -72,11 +80,20 @@ mfe-app/
 │       ├── performanceMonitor.js # 🆕 Performance monitoring
 │       ├── security.js   # 🆕 Security utilities
 │       └── index.js      # Main exports
-├── shell/                # Host application (Port 3000)
+├── shell/                # Host application (Port 3000) + PWA
+│   ├── public/
+│   │   ├── manifest.json # 🆕 PWA Web App Manifest
+│   │   ├── sw.js         # 🆕 Service Worker
+│   │   └── icons/        # 🆕 PWA icons
 │   ├── src/
 │   │   ├── App.jsx       # Main routing & layout
-│   │   ├── main.jsx
-│   │   └── index.css     # Global styles
+│   │   ├── main.jsx      # 🔄 PWA initialization
+│   │   ├── index.css     # Global styles
+│   │   ├── pwa/          # 🆕 PWA module
+│   │   │   ├── registerSW.js  # Service worker registration
+│   │   │   └── usePWA.js      # React hook for PWA
+│   │   └── components/
+│   │       └── PWAStatus.jsx  # 🆕 PWA UI components
 │   └── vite.config.js    # Module Federation config
 ├── login-mfe/            # Login & Countries MFE (Port 3001)
 │   ├── src/
@@ -169,6 +186,13 @@ npm run preview
 
 ## 📱 Features
 
+### 🆕 Progressive Web App (PWA)
+- **Installable** - Add to home screen on mobile and desktop
+- **Offline Support** - Service worker caches assets for offline use
+- **Update Notifications** - Automatic detection and notification of new versions
+- **Network Status** - Visual indicators show online/offline state
+- **Caching Strategies** - Cache-first for assets, network-first for API calls
+
 ### Login MFE
 - User authentication with demo credentials
 - Country selection from REST Countries API
@@ -191,6 +215,8 @@ npm run preview
 - **Vite 5** - Build Tool
 - **@originjs/vite-plugin-federation** - Module Federation Plugin
 - **React Router 6** - Navigation
+- **Service Workers** - PWA offline support
+- **Web App Manifest** - PWA installation
 - **Base64 Encoding** - Session storage encoding
 
 ## 📡 APIs Used
