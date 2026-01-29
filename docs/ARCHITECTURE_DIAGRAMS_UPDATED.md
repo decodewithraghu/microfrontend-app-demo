@@ -23,6 +23,112 @@ This document contains updated Mermaid diagrams reflecting the current MFE Appli
 15. [Complete Application Flow](#15-complete-application-flow)
 16. [Architecture Mindmap](#16-architecture-mindmap)
 17. [Technology Stack Mindmap](#17-technology-stack-mindmap)
+18. [PWA Architecture](#18-pwa-architecture-diagram)
+19. [PWA Service Worker Flow](#19-pwa-service-worker-flow)
+
+---
+
+## 18. PWA Architecture Diagram
+
+```mermaid
+flowchart TB
+    subgraph Browser["🌐 BROWSER"]
+        subgraph PWA["📱 PROGRESSIVE WEB APP"]
+            subgraph Shell["SHELL APPLICATION (Port 3000)"]
+                MainApp["React App"]
+                PWAStatus["PWA Status<br/>Component"]
+                OfflineBanner["Offline<br/>Banner"]
+            end
+            
+            subgraph PWAModule["PWA MODULE"]
+                RegisterSW["registerSW.js<br/>• initPWA()<br/>• registerServiceWorker()<br/>• updateServiceWorker()"]
+                UsePWA["usePWA.js Hook<br/>• isOnline<br/>• canInstall<br/>• hasUpdate"]
+            end
+            
+            ServiceWorker["🔧 Service Worker (sw.js)<br/>• Cache Management<br/>• Offline Support<br/>• Push Notifications"]
+        end
+        
+        subgraph Cache["📦 CACHE STORAGE"]
+            StaticCache["Static Cache<br/>• index.html<br/>• manifest.json<br/>• icons"]
+            DynamicCache["Dynamic Cache<br/>• API responses<br/>• MFE assets"]
+        end
+        
+        subgraph Manifest["📋 WEB APP MANIFEST"]
+            ManifestFile["manifest.json<br/>• App name<br/>• Icons<br/>• Theme color<br/>• Display mode"]
+        end
+    end
+    
+    subgraph Install["📲 INSTALLATION"]
+        InstallPrompt["Install Prompt<br/>(beforeinstallprompt)"]
+        HomeScreen["Home Screen<br/>Icon"]
+        Standalone["Standalone<br/>Mode"]
+    end
+    
+    MainApp --> PWAModule
+    PWAModule --> ServiceWorker
+    ServiceWorker --> Cache
+    Shell --> Manifest
+    
+    InstallPrompt --> HomeScreen
+    HomeScreen --> Standalone
+    Standalone --> Shell
+    
+    ServiceWorker -.->|"Intercepts"| Network["🌐 Network<br/>Requests"]
+```
+
+---
+
+## 19. PWA Service Worker Flow
+
+```mermaid
+sequenceDiagram
+    participant App as React App
+    participant SW as Service Worker
+    participant Cache as Cache Storage
+    participant Network as Network
+    
+    Note over App,Network: Service Worker Registration
+    App->>SW: Register service worker
+    SW->>SW: Install event
+    SW->>Cache: Cache static assets
+    SW-->>App: Registration complete
+    
+    Note over App,Network: Fetch with Cache-First Strategy (Static Assets)
+    App->>SW: Request static asset
+    SW->>Cache: Check cache
+    alt Cache Hit
+        Cache-->>SW: Return cached response
+        SW-->>App: Serve from cache
+    else Cache Miss
+        SW->>Network: Fetch from network
+        Network-->>SW: Response
+        SW->>Cache: Store in cache
+        SW-->>App: Serve response
+    end
+    
+    Note over App,Network: Fetch with Network-First Strategy (API/MFE)
+    App->>SW: Request API/remoteEntry.js
+    SW->>Network: Fetch from network
+    alt Network Available
+        Network-->>SW: Response
+        SW->>Cache: Update cache
+        SW-->>App: Serve response
+    else Network Unavailable
+        SW->>Cache: Fallback to cache
+        Cache-->>SW: Cached response
+        SW-->>App: Serve cached response
+    end
+    
+    Note over App,Network: Update Flow
+    App->>SW: Check for updates
+    SW->>Network: Fetch new SW
+    Network-->>SW: New version available
+    SW->>App: Dispatch update event
+    App->>App: Show update notification
+    App->>SW: Skip waiting
+    SW->>SW: Activate new SW
+    SW-->>App: Page reload
+```
 
 ---
 
@@ -38,6 +144,11 @@ mindmap
       Protected Routes
       Error Boundary
       Module Federation Host
+      PWA Features
+        Service Worker
+        Web App Manifest
+        Offline Support
+        Install Prompt
     Login MFE
       Port 3001
       LoginForm Component
@@ -76,12 +187,16 @@ mindmap
         useEventBus
         useStateStore
         useAuth
+        usePWA
     Storage
       SessionStorage
         mfe_auth_session
         mfe_selected_country
       LocalStorage
         State Snapshots
+      Cache Storage
+        Static Assets
+        Dynamic Content
     External APIs
       REST Countries
       Open-Meteo
@@ -124,6 +239,23 @@ mindmap
         Redux-like Pattern
         Immutable Updates
         Persistence
+    Progressive Web App
+      Service Worker
+        Cache Strategies
+        Offline Support
+        Background Sync
+      Web App Manifest
+        App Icons
+        Theme Colors
+        Display Mode
+      PWA Components
+        PWAStatus
+        OfflineBanner
+        InstallBanner
+      usePWA Hook
+        isOnline
+        canInstall
+        hasUpdate
     Styling
       CSS
         Component Styles
@@ -157,6 +289,9 @@ mindmap
         Country Selection
       LocalStorage
         State Persistence
+      Cache Storage
+        Static Assets
+        API Responses
       Fetch API
         HTTP Requests
 ```
@@ -174,6 +309,11 @@ flowchart TB
             ErrorBound["Error Boundary"]
             Protected["Protected<br/>Routes"]
             
+            subgraph PWA["📱 PWA LAYER"]
+                ServiceWorker["Service Worker<br/>(sw.js)"]
+                PWAComponents["PWA Components<br/>• PWAStatus<br/>• OfflineBanner"]
+            end
+            
             subgraph ModFed["MODULE FEDERATION HOST"]
                 LoginMFE["🔐 Login MFE<br/>Port 3001"]
                 WeatherMFE["🌤️ Weather MFE<br/>Port 3002"]
@@ -188,10 +328,12 @@ flowchart TB
             Hooks["🪝 React Hooks"]
         end
         
-        subgraph Storage["SESSION STORAGE"]
-            AuthSession["mfe_auth_session<br/>(Base64 encoded)"]
-            CountryData["mfe_selected_country<br/>(Base64 encoded)"]
+        subgraph Storage["BROWSER STORAGE"]
+            SessionStore["Session Storage<br/>• mfe_auth_session<br/>• mfe_selected_country"]
+            CacheStore["Cache Storage<br/>• Static assets<br/>• API responses"]
         end
+        
+        Manifest["📋 manifest.json<br/>PWA Configuration"]
     end
     
     subgraph APIs["EXTERNAL APIs"]
@@ -203,13 +345,15 @@ flowchart TB
     Router --> ModFed
     Nav --> Router
     Protected --> ModFed
+    ServiceWorker --> CacheStore
     
     LoginMFE --> Shared
     WeatherMFE --> Shared
     PopulationMFE --> Shared
     
-    Shared --> Storage
+    Shared --> SessionStore
     
+    ServiceWorker -.->|"Intercepts"| APIs
     WeatherMFE -.->|HTTP| OpenMeteo
     PopulationMFE -.->|HTTP| WorldBank
     LoginMFE -.->|HTTP| RestCountries
@@ -852,6 +996,16 @@ sequenceDiagram
 - **Why**: Consistent session format between Shell and Login MFE
 - **Fallback**: Subscribes to EventBus for real-time updates
 
+### 5. Progressive Web App (PWA)
+- **Service Worker**: Caches static assets and API responses for offline support
+- **Caching Strategies**:
+  - Cache-First: Static assets (JS, CSS, images)
+  - Network-First: API calls and MFE remote entries
+  - Stale-While-Revalidate: General requests
+- **Installation**: Web App Manifest enables "Add to Home Screen"
+- **Components**: PWAStatus, OfflineBanner for user feedback
+- **React Hook**: `usePWA()` provides reactive PWA state
+
 ---
 
 ## Running the Application
@@ -860,7 +1014,7 @@ sequenceDiagram
 # Development (HMR, but Module Federation won't work)
 npm run dev
 
-# Production-like (Module Federation works)
+# Production-like (Module Federation + PWA works)
 npm run build
 npm run preview
 
@@ -868,3 +1022,5 @@ npm run preview
 ```
 
 **Important**: Module Federation requires `npm run build` before `npm run preview` because `remoteEntry.js` is only generated during the build process.
+
+**PWA Note**: Service workers only work in production builds. Use `npm run preview` to test PWA features like offline mode and install prompts.
