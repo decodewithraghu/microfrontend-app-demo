@@ -7,8 +7,7 @@ const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
+  '/icons/icon.svg'
 ];
 
 // Remote MFE URLs to cache
